@@ -34,7 +34,13 @@
 							<span><i class="icon-arrows "></i></span>
 						</div>
 						<div class="col-md-3">
-							<img src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" class="img-thumbnail" />
+              {if $slide.type == 'video'}
+                <video class="img-thumbnail">
+                  <source src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" >
+                </video>
+              {else}
+							  <img src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" class="img-thumbnail" />
+              {/if}
 						</div>
 						<div class="col-md-8">
 							<h4 class="pull-left">

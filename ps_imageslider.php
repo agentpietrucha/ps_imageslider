@@ -525,13 +525,23 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             /* Processes if no errors  */
             if (!$errors) {
                 /* Adds */
+                $failed = true;
                 if (!Tools::getValue('id_slide')) {
-                    if (!$slide->add()) {
+                    if ($failed = !$slide->add()) {
                         $errors[] = $this->displayError($this->trans('The slide could not be added.', [], 'Modules.Imageslider.Admin'));
                     }
-                } elseif (!$slide->update()) {
+                } elseif ($failed = !$slide->update()) {
                     $errors[] = $this->displayError($this->trans('The slide could not be updated.', [], 'Modules.Imageslider.Admin'));
                 }
+
+                if (!$failed && count($errors) === 0) {
+                    foreach ($languages as $language) {
+                        if (!is_null($old_slide_images[$language['id_lang']]) && !empty($_FILES['image_' . $language['id_lang']]['tmp_name'])) {
+                            unlink($this->getImageDir() . $old_slide_images[$language['id_lang']]);
+                        }
+                    }
+                }
+
                 $this->clearCache();
             }
         } elseif (Tools::isSubmit('delete_id_slide')) {
@@ -542,14 +552,6 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 $this->_html .= $this->displayError('Could not delete.');
             } else {
                 Tools::redirectAdmin($this->context->link->getAdminLink('AdminModules', true) . '&conf=1&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name);
-            }
-        }
-
-        if (count($errors) === 0 && isset($old_slide_images) && isset($languages)) {
-            foreach ($languages as $language) {
-                if (!is_null($old_slide_images[$language['id_lang']])) {
-                    unlink($this->getImageDir() . $old_slide_images[$language['id_lang']]);
-                }
             }
         }
 
@@ -705,8 +707,8 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         $id_lang = $this->context->language->id;
 
         $slides = Db::getInstance((bool) _PS_USE_SQL_SLAVE_)->executeS(
-            'SELECT hs.`id_homeslider_slides` as id_slide, hss.`position`, hss.`active`, hssl.`title`,
-            hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image`
+            'SELECT hs.`id_homeslider_slides` as id_slide, hss.`position`, hss.`active`, hss.`type`,
+            hssl.`title`, hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image`
             FROM ' . _DB_PREFIX_ . 'homeslider hs
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides hss ON (hs.id_homeslider_slides = hss.id_homeslider_slides)
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides_lang hssl ON (hss.id_homeslider_slides = hssl.id_homeslider_slides)
@@ -868,6 +870,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             $slide = new Ps_HomeSlide((int) Tools::getValue('id_slide'));
             $fields_form['form']['input'][] = ['type' => 'hidden', 'name' => 'id_slide'];
             $fields_form['form']['images'] = $slide->image;
+            $fields_form['form']['type'] = $slide->type;
 
             $has_picture = true;
 
