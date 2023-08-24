@@ -565,7 +565,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         }
     }
 
-    private function validateVideo($video): bool|string
+    private function validateVideo($video)
     {
         if ($video['size'] > $this::MAX_VIDEO_FILE_SIZE) {
             return $this->trans('Uploaded file is too large', [], 'Modules.Imageslider.Admin');
