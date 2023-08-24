@@ -39,7 +39,7 @@
   top: 0;
 }
 
-.homeslider img {
+.homeslider img, .homeslider video {
   display: block;
   position: relative;
   z-index: 1;

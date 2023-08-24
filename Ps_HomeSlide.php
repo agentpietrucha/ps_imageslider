@@ -27,6 +27,7 @@ class Ps_HomeSlide extends ObjectModel
     public $active;
     public $position;
     public $id_shop;
+    public $type;
 
     /**
      * @see ObjectModel::$definition
@@ -38,6 +39,7 @@ class Ps_HomeSlide extends ObjectModel
         'fields' => [
             'active' => ['type' => self::TYPE_BOOL, 'validate' => 'isBool', 'required' => true],
             'position' => ['type' => self::TYPE_INT, 'validate' => 'isunsignedInt', 'required' => true],
+            'type' => ['type' => self::TYPE_STRING, 'validate' => 'isCleanHtml', 'required' => false],
 
             // Lang fields
             'description' => ['type' => self::TYPE_HTML, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 4000],

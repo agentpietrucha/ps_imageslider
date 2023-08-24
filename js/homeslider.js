@@ -32,4 +32,6 @@ jQuery(document).ready(function ($) {
 
   $(".rslides").responsiveSlides(homesliderConfig);
 
+  // Handle video loading here
+
 });
