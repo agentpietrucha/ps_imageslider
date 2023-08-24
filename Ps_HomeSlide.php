@@ -23,7 +23,8 @@ class Ps_HomeSlide extends ObjectModel
     public $description;
     public $url;
     public $legend;
-    public $image;
+    public $image_desktop;
+    public $image_mobile;
     public $active;
     public $position;
     public $id_shop;
@@ -46,7 +47,8 @@ class Ps_HomeSlide extends ObjectModel
             'title' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
             'legend' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
             'url' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isUrl', 'size' => 255],
-            'image' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'image_desktop' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'image_mobile' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
         ],
     ];
 
@@ -68,8 +70,17 @@ class Ps_HomeSlide extends ObjectModel
     {
         $res = true;
 
-        $images = $this->image;
-        foreach ($images as $image) {
+        $images_desktop = $this->image_desktop;
+        foreach ($images_desktop as $image) {
+            if (preg_match('/sample/', $image) === 0) {
+                if ($image && file_exists(__DIR__ . '/images/' . $image)) {
+                    $res &= @unlink(__DIR__ . '/images/' . $image);
+                }
+            }
+        }
+
+        $images_mobile = $this->image_mobile;
+        foreach ($images_mobile as $image) {
             if (preg_match('/sample/', $image) === 0) {
                 if ($image && file_exists(__DIR__ . '/images/' . $image)) {
                     $res &= @unlink(__DIR__ . '/images/' . $image);

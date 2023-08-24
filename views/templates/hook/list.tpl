@@ -36,10 +36,10 @@
 						<div class="col-md-3">
               {if $slide.type == 'video'}
                 <video class="img-thumbnail">
-                  <source src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" >
+                  <source src="{$image_baseurl}{$slide.image_desktop}" >
                 </video>
               {else}
-							  <img src="{$image_baseurl}{$slide.image}" alt="{$slide.title}" class="img-thumbnail" />
+							  <img src="{$image_baseurl}{$slide.image_desktop}" alt="{$slide.title}" class="img-thumbnail" />
               {/if}
 						</div>
 						<div class="col-md-8">

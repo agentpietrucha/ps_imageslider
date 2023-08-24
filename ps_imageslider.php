@@ -485,57 +485,62 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 /* Uploads image and sets slide */
                 $type = '';
                 $imagesize = 0;
-                if (
-                    isset($_FILES['image_' . $language['id_lang']]) &&
-                    !empty($_FILES['image_' . $language['id_lang']]['tmp_name'])
-                ) {
-                    $type = Tools::strtolower(Tools::substr(strrchr($_FILES['image_' . $language['id_lang']]['name'], '.'), 1));
-                    if ($type !== 'mp4') {
-                        $imagesize = @getimagesize($_FILES['image_' . $language['id_lang']]['tmp_name']);
+                foreach ($this->image_types as $image_type) {
+                    $uploaded_image = $this->getImage($image_type, $language);
+                    if (
+                        isset($uploaded_image) &&
+                        !empty($uploaded_image['tmp_name'])
+                    ) {
+                        $type = Tools::strtolower(Tools::substr(strrchr($uploaded_image['name'], '.'), 1));
+                        if ($type !== 'mp4') {
+                            $imagesize = @getimagesize($uploaded_image['tmp_name']);
+                        }
                     }
-                }
-                $salt = sha1(microtime());
 
-                if ($type === 'mp4') {
-                    if ($error = $this->validateVideo($_FILES['image_' . $language['id_lang']])) {
-                        $errors[] = $error;
-                    } elseif (!move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], __DIR__ . '/images/' . $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'])) {
-                        $errors[] = $this->displayError($this->trans('An error occurred during the video upload process.', [], 'Modules.Imageslider.Admin'));
-                    }
-                    $slide->image[$language['id_lang']] = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
-                    $slide->type = 'video';
-                }
+                    $salt = sha1(microtime());
+                    $fileNameEncoded = urlencode($uploaded_image['name']);
 
-                if (
-                    !empty($type) &&
-                    !empty($imagesize) &&
-                    in_array(
-                        Tools::strtolower(Tools::substr(strrchr($imagesize['mime'], '/'), 1)),
-                        [
-                            'jpg',
-                            'gif',
-                            'jpeg',
-                            'png',
-                        ]
-                    ) &&
-                    in_array($type, ['jpg', 'gif', 'jpeg', 'png'])
-                ) {
-                    $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
-                    if ($error = ImageManager::validateUpload($_FILES['image_' . $language['id_lang']])) {
-                        $errors[] = $error;
-                    } elseif (!$temp_name || !move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $temp_name)) {
-                        return false;
-                    } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'], null, null, $type)) {
-                        $errors[] = $this->displayError($this->trans('An error occurred during the image upload process.', [], 'Admin.Notifications.Error'));
+                    if ($type === 'mp4') {
+                        if ($error = $this->validateVideo($uploaded_image)) {
+                            $errors[] = $error;
+                        } elseif (!move_uploaded_file($uploaded_image['tmp_name'], __DIR__ . '/images/' . $salt . '_' . $fileNameEncoded)) {
+                            $errors[] = $this->displayError($this->trans('An error occurred during the ' . $image_type . ' video upload process.', [], 'Modules.Imageslider.Admin'));
+                        }
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
+                        $slide->type = 'video';
                     }
-                    if (file_exists($temp_name)) {
-                        @unlink($temp_name);
+
+                    if (
+                        !empty($type) &&
+                        !empty($imagesize) &&
+                        in_array(
+                            Tools::strtolower(Tools::substr(strrchr($imagesize['mime'], '/'), 1)),
+                            [
+                                'jpg',
+                                'gif',
+                                'jpeg',
+                                'png',
+                            ]
+                        ) &&
+                        in_array($type, ['jpg', 'gif', 'jpeg', 'png'])
+                    ) {
+                        $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
+                        if ($error = ImageManager::validateUpload($uploaded_image)) {
+                            $errors[] = $error;
+                        } elseif (!$temp_name || !move_uploaded_file($uploaded_image['tmp_name'], $temp_name)) {
+                            return false;
+                        } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $fileNameEncoded, null, null, $type)) {
+                            $errors[] = $this->displayError($this->trans('An error occurred during the ' . $image_type . ' image upload process.', [], 'Admin.Notifications.Error'));
+                        }
+                        if (file_exists($temp_name)) {
+                            @unlink($temp_name);
+                        }
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
+                        $slide->type = 'image';
+                    } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = Tools::getValue('image_old_' . $language['id_lang']);
+                        $slide->type = 'image';
                     }
-                    $slide->image[$language['id_lang']] = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
-                    $slide->type = 'image';
-                } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
-                    $slide->image[$language['id_lang']] = Tools::getValue('image_old_' . $language['id_lang']);
-                    $slide->type = 'image';
                 }
             }
 
@@ -616,9 +621,12 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         $slides = $this->getSlides(true);
         if (is_array($slides)) {
             foreach ($slides as &$slide) {
-                $slide['sizes'] = @getimagesize((__DIR__ . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $slide['image']));
-                if (isset($slide['sizes'][3]) && $slide['sizes'][3]) {
-                    $slide['size'] = $slide['sizes'][3];
+                foreach ($this->image_types as $image_type) {
+                    $key = 'image_' . $image_type;
+                    $slide['sizes'][$key] = @getimagesize((__DIR__ . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $slide[$key]));
+                    if (isset($slide['sizes'][$key][3]) && $slide['sizes'][$key][3]) {
+                        $slide['size'][$key] = $slide['sizes'][$key][3];
+                    }
                 }
             }
         }
