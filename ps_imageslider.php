@@ -469,7 +469,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 /* Sets position */
                 $slide->position = (int) $this->getNextPosition();
             }
-            $old_slide_images = $slide->image;
+            $old_slide_images = [];
             /* Sets active */
             $slide->active = (int) Tools::getValue('active_slide');
 
@@ -483,9 +483,9 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 $slide->description[$language['id_lang']] = Tools::getValue('description_' . $language['id_lang']);
 
                 /* Uploads image and sets slide */
-                $type = '';
-                $imagesize = 0;
                 foreach ($this->image_types as $image_type) {
+                    $type = '';
+                    $imagesize = 0;
                     $uploaded_image = $this->getImage($image_type, $language);
                     if (
                         isset($uploaded_image) &&
@@ -506,6 +506,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                         } elseif (!move_uploaded_file($uploaded_image['tmp_name'], __DIR__ . '/images/' . $salt . '_' . $fileNameEncoded)) {
                             $errors[] = $this->displayError($this->trans('An error occurred during the ' . $image_type . ' video upload process.', [], 'Modules.Imageslider.Admin'));
                         }
+                        $old_slide_images[] = $slide->{'image_' . $image_type}[$language['id_lang']];
                         $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
                         $slide->type = 'video';
                     }
@@ -547,7 +548,6 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             /* Processes if no errors  */
             if (!$errors) {
                 /* Adds */
-                $failed = true;
                 if (!Tools::getValue('id_slide')) {
                     if ($failed = !$slide->add()) {
                         $errors[] = $this->displayError($this->trans('The slide could not be added.', [], 'Modules.Imageslider.Admin'));
@@ -557,9 +557,9 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 }
 
                 if (!$failed && count($errors) === 0) {
-                    foreach ($languages as $language) {
-                        if (!is_null($old_slide_images[$language['id_lang']]) && !empty($_FILES['image_' . $language['id_lang']]['tmp_name'])) {
-                            unlink($this->getImageDir() . $old_slide_images[$language['id_lang']]);
+                    foreach ($old_slide_images as $old_slide_image) {
+                        if (!empty($old_slide_image)) {
+                            unlink($this->getImageDir() . $old_slide_image);
                         }
                     }
                 }
@@ -738,9 +738,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides hss ON (hs.id_homeslider_slides = hss.id_homeslider_slides)
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides_lang hssl ON (hss.id_homeslider_slides = hssl.id_homeslider_slides)
             WHERE id_shop = ' . (int) $id_shop . '
-            AND hssl.id_lang = ' . (int) $id_lang . '
-            AND hssl.`image_desktop` <> ""' . '
-            AND hssl.`image_mobile` <> ""' .
+            AND hssl.id_lang = ' . (int) $id_lang .
             ($active ? ' AND hss.`active` = 1' : ' ') . '
             ORDER BY hss.position'
         );
