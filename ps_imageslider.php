@@ -536,6 +536,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                         if (file_exists($temp_name)) {
                             @unlink($temp_name);
                         }
+                        $old_slide_images[] = $slide->{'image_' . $image_type}[$language['id_lang']];
                         $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
                         $slide->type = 'image';
                     } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
