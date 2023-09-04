@@ -33,5 +33,18 @@ jQuery(document).ready(function ($) {
   $(".rslides").responsiveSlides(homesliderConfig);
 
   // Handle video loading here
+  const videoItems = $('#carousel .carousel-item');
+  videoItems.each(function() {
+    const videoItem = $(this);
+    const video = videoItem.find('video');
+    const link = videoItem.find('a');
 
+    video[0].play()
+        .catch((e) => {
+          link.on('touchend', () => false);
+        });
+    video.on('play', () => {
+      link.off('touchend');
+    });
+  });
 });
