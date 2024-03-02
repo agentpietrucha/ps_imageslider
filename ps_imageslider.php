@@ -38,11 +38,14 @@ include_once __DIR__ . '/Ps_HomeSlide.php';
 
 class Ps_ImageSlider extends Module implements WidgetInterface
 {
+    const MAX_VIDEO_FILE_SIZE = 20971520;
+
     protected $_html = '';
     protected $default_speed = 5000;
     protected $default_pause_on_hover = 1;
     protected $default_wrap = 1;
     protected $templateFile;
+    private $image_types = ['desktop', 'mobile'];
     /**
      * @var string
      */
@@ -147,7 +150,9 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                     . '&utm_campaign=back-office-' . Tools::strtoupper($this->context->language->iso_code)
                     . '&utm_content=' . (defined('_PS_HOST_MODE_') ? 'ondemand' : 'download');
                 $rtlSuffix = $language['is_rtl'] ? '_rtl' : '';
-                $slide->image[$language['id_lang']] = sprintf('sample-%d%s.jpg', $i, $rtlSuffix);
+                foreach ($this->image_types as $image_type) {
+                    $slide->{'image_' . $image_type}[$language['id_lang']] = sprintf('sample-%d%s.jpg', $i, $rtlSuffix);
+                }
             }
             $slide->add();
         }
@@ -194,6 +199,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
               `id_homeslider_slides` int(10) unsigned NOT NULL AUTO_INCREMENT,
               `position` int(10) unsigned NOT NULL DEFAULT \'0\',
               `active` tinyint(1) unsigned NOT NULL DEFAULT \'0\',
+              `type` enum (\'image\', \'video\') default \'image\',
               PRIMARY KEY (`id_homeslider_slides`)
             ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=UTF8;
         ');
@@ -207,7 +213,8 @@ class Ps_ImageSlider extends Module implements WidgetInterface
               `description` text NOT NULL,
               `legend` varchar(255) NOT NULL,
               `url` varchar(255) NOT NULL,
-              `image` varchar(255) NOT NULL,
+              `image_desktop` varchar(255) NOT NULL,
+              `image_mobile` varchar(255) NOT NULL,
               PRIMARY KEY (`id_homeslider_slides`,`id_lang`)
             ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=UTF8;
         ');
@@ -297,6 +304,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
 
     protected function _postValidation()
     {
+        return true;
         $errors = [];
 
         /* Validation for Slider configuration */
@@ -337,8 +345,11 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 if (Tools::strlen(Tools::getValue('url_' . $language['id_lang'])) > 0 && !Validate::isUrl(Tools::getValue('url_' . $language['id_lang']))) {
                     $errors[] = $this->trans('The URL format is not correct.', [], 'Modules.Imageslider.Admin');
                 }
-                if (Tools::getValue('image_' . $language['id_lang']) != null && !Validate::isFileName(Tools::getValue('image_' . $language['id_lang']))) {
-                    $errors[] = $this->trans('Invalid filename.', [], 'Modules.Imageslider.Admin');
+                foreach ($this->image_types as $image_type) {
+                    $image_name = 'image_' . $image_type . '_' . $language['id_lang'];
+                    if (Tools::getValue($image_name) != null && !Validate::isFileName(Tools::getValue($image_name))) {
+                        $errors[] = $this->trans('Invalid ' . $image_type . ' filename.', [], 'Modules.Imageslider.Admin');
+                    }
                 }
                 if (Tools::getValue('image_old_' . $language['id_lang']) != null && !Validate::isFileName(Tools::getValue('image_old_' . $language['id_lang']))) {
                     $errors[] = $this->trans('Invalid filename.', [], 'Modules.Imageslider.Admin');
@@ -347,8 +358,13 @@ class Ps_ImageSlider extends Module implements WidgetInterface
 
             /* Checks title/legend/description for default lang */
             $id_lang_default = (int) Configuration::get('PS_LANG_DEFAULT');
-            if (!Tools::isSubmit('has_picture') && (!isset($_FILES['image_' . $id_lang_default]) || empty($_FILES['image_' . $id_lang_default]['tmp_name']))) {
-                $errors[] = $this->trans('The image is not set.', [], 'Modules.Imageslider.Admin');
+            if (!Tools::isSubmit('id_slide')) {
+                foreach ($this->image_types as $image_type) {
+                    $image = $_FILES['image_' . $image_type . '_' . $id_lang_default];
+                    if (!Tools::isSubmit('has_picture') && (!isset($image) || empty($image['tmp_name']))) {
+                        $errors[] = $this->trans('The ' . $image_type . ' image is not set.', [], 'Modules.Imageslider.Admin');
+                    }
+                }
             }
             if (Tools::getValue('image_old_' . $id_lang_default) && !Validate::isFileName(Tools::getValue('image_old_' . $id_lang_default))) {
                 $errors[] = $this->trans('The image is not set.', [], 'Modules.Imageslider.Admin');
@@ -367,6 +383,11 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         /* Returns if validation is ok */
 
         return true;
+    }
+
+    private function getImage($image_type, $language)
+    {
+        return $_FILES['image_' . $image_type . '_' . $language['id_lang']];
     }
 
     protected function _postProcess()
@@ -448,6 +469,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 /* Sets position */
                 $slide->position = (int) $this->getNextPosition();
             }
+            $old_slide_images = [];
             /* Sets active */
             $slide->active = (int) Tools::getValue('active_slide');
 
@@ -461,46 +483,66 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 $slide->description[$language['id_lang']] = Tools::getValue('description_' . $language['id_lang']);
 
                 /* Uploads image and sets slide */
-                $type = '';
-                $imagesize = 0;
+                foreach ($this->image_types as $image_type) {
+                    $type = '';
+                    $imagesize = 0;
+                    $uploaded_image = $this->getImage($image_type, $language);
+                    if (
+                        isset($uploaded_image) &&
+                        !empty($uploaded_image['tmp_name'])
+                    ) {
+                        $type = Tools::strtolower(Tools::substr(strrchr($uploaded_image['name'], '.'), 1));
+                        if ($type !== 'mp4') {
+                            $imagesize = @getimagesize($uploaded_image['tmp_name']);
+                        }
+                    }
 
-                if (
-                    isset($_FILES['image_' . $language['id_lang']]) &&
-                    !empty($_FILES['image_' . $language['id_lang']]['tmp_name'])
-                ) {
-                    $type = Tools::strtolower(Tools::substr(strrchr($_FILES['image_' . $language['id_lang']]['name'], '.'), 1));
-                    $imagesize = @getimagesize($_FILES['image_' . $language['id_lang']]['tmp_name']);
-                }
-
-                if (
-                    !empty($type) &&
-                    !empty($imagesize) &&
-                    in_array(
-                        Tools::strtolower(Tools::substr(strrchr($imagesize['mime'], '/'), 1)),
-                        [
-                            'jpg',
-                            'gif',
-                            'jpeg',
-                            'png',
-                        ]
-                    ) &&
-                    in_array($type, ['jpg', 'gif', 'jpeg', 'png'])
-                ) {
-                    $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
                     $salt = sha1(microtime());
-                    if ($error = ImageManager::validateUpload($_FILES['image_' . $language['id_lang']])) {
-                        $errors[] = $error;
-                    } elseif (!$temp_name || !move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $temp_name)) {
-                        return false;
-                    } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'], null, null, $type)) {
-                        $errors[] = $this->displayError($this->trans('An error occurred during the image upload process.', [], 'Admin.Notifications.Error'));
+                    $fileNameEncoded = urlencode($uploaded_image['name']);
+
+                    if ($type === 'mp4') {
+                        if ($error = $this->validateVideo($uploaded_image)) {
+                            $errors[] = $error;
+                        } elseif (!move_uploaded_file($uploaded_image['tmp_name'], __DIR__ . '/images/' . $salt . '_' . $fileNameEncoded)) {
+                            $errors[] = $this->displayError($this->trans('An error occurred during the ' . $image_type . ' video upload process.', [], 'Modules.Imageslider.Admin'));
+                        }
+                        $old_slide_images[] = $slide->{'image_' . $image_type}[$language['id_lang']];
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
+                        $slide->type = 'video';
                     }
-                    if (file_exists($temp_name)) {
-                        @unlink($temp_name);
+
+                    if (
+                        !empty($type) &&
+                        !empty($imagesize) &&
+                        in_array(
+                            Tools::strtolower(Tools::substr(strrchr($imagesize['mime'], '/'), 1)),
+                            [
+                                'jpg',
+                                'gif',
+                                'jpeg',
+                                'png',
+                            ]
+                        ) &&
+                        in_array($type, ['jpg', 'gif', 'jpeg', 'png'])
+                    ) {
+                        $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
+                        if ($error = ImageManager::validateUpload($uploaded_image)) {
+                            $errors[] = $error;
+                        } elseif (!$temp_name || !move_uploaded_file($uploaded_image['tmp_name'], $temp_name)) {
+                            return false;
+                        } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $fileNameEncoded, null, null, $type)) {
+                            $errors[] = $this->displayError($this->trans('An error occurred during the ' . $image_type . ' image upload process.', [], 'Admin.Notifications.Error'));
+                        }
+                        if (file_exists($temp_name)) {
+                            @unlink($temp_name);
+                        }
+                        $old_slide_images[] = $slide->{'image_' . $image_type}[$language['id_lang']];
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = $salt . '_' . $fileNameEncoded;
+                        $slide->type = 'image';
+                    } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
+                        $slide->{'image_' . $image_type}[$language['id_lang']] = Tools::getValue('image_old_' . $language['id_lang']);
+                        $slide->type = 'image';
                     }
-                    $slide->image[$language['id_lang']] = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
-                } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
-                    $slide->image[$language['id_lang']] = Tools::getValue('image_old_' . $language['id_lang']);
                 }
             }
 
@@ -508,12 +550,21 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             if (!$errors) {
                 /* Adds */
                 if (!Tools::getValue('id_slide')) {
-                    if (!$slide->add()) {
+                    if ($failed = !$slide->add()) {
                         $errors[] = $this->displayError($this->trans('The slide could not be added.', [], 'Modules.Imageslider.Admin'));
                     }
-                } elseif (!$slide->update()) {
+                } elseif ($failed = !$slide->update()) {
                     $errors[] = $this->displayError($this->trans('The slide could not be updated.', [], 'Modules.Imageslider.Admin'));
                 }
+
+                if (!$failed && count($errors) === 0) {
+                    foreach ($old_slide_images as $old_slide_image) {
+                        if (!empty($old_slide_image)) {
+                            unlink($this->getImageDir() . $old_slide_image);
+                        }
+                    }
+                }
+
                 $this->clearCache();
             }
         } elseif (Tools::isSubmit('delete_id_slide')) {
@@ -537,6 +588,19 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         }
     }
 
+    private function validateVideo($video)
+    {
+        if ($video['size'] > $this::MAX_VIDEO_FILE_SIZE) {
+            return $this->trans('Uploaded file is too large', [], 'Modules.Imageslider.Admin');
+        }
+        return false;
+    }
+
+    private function getImageDir(): string
+    {
+        return __DIR__ . '/images/';
+    }
+
     public function hookdisplayHeader($params)
     {
         $this->context->controller->registerStylesheet('modules-homeslider', 'modules/' . $this->name . '/css/homeslider.css', ['media' => 'all', 'priority' => 150]);
@@ -558,9 +622,12 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         $slides = $this->getSlides(true);
         if (is_array($slides)) {
             foreach ($slides as &$slide) {
-                $slide['sizes'] = @getimagesize((__DIR__ . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $slide['image']));
-                if (isset($slide['sizes'][3]) && $slide['sizes'][3]) {
-                    $slide['size'] = $slide['sizes'][3];
+                foreach ($this->image_types as $image_type) {
+                    $key = 'image_' . $image_type;
+                    $slide['sizes'][$key] = @getimagesize((__DIR__ . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $slide[$key]));
+                    if (isset($slide['sizes'][$key][3]) && $slide['sizes'][$key][3]) {
+                        $slide['size'][$key] = $slide['sizes'][$key][3];
+                    }
                 }
             }
         }
@@ -666,20 +733,22 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         $id_lang = $this->context->language->id;
 
         $slides = Db::getInstance((bool) _PS_USE_SQL_SLAVE_)->executeS(
-            'SELECT hs.`id_homeslider_slides` as id_slide, hss.`position`, hss.`active`, hssl.`title`,
-            hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image`
+            'SELECT hs.`id_homeslider_slides` as id_slide, hss.`position`, hss.`active`, hss.`type`,
+            hssl.`title`, hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image_desktop`, hssl.`image_mobile`
             FROM ' . _DB_PREFIX_ . 'homeslider hs
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides hss ON (hs.id_homeslider_slides = hss.id_homeslider_slides)
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides_lang hssl ON (hss.id_homeslider_slides = hssl.id_homeslider_slides)
             WHERE id_shop = ' . (int) $id_shop . '
-            AND hssl.id_lang = ' . (int) $id_lang . '
-            AND hssl.`image` <> ""' .
+            AND hssl.id_lang = ' . (int) $id_lang .
             ($active ? ' AND hss.`active` = 1' : ' ') . '
             ORDER BY hss.position'
         );
 
         foreach ($slides as &$slide) {
-            $slide['image_url'] = $this->context->link->getMediaLink(_MODULE_DIR_ . 'ps_imageslider/images/' . $slide['image']);
+            foreach($this->image_types as $image_type) {
+                $key = 'image_' . $image_type;
+                $slide[$key . '_url'] = $this->context->link->getMediaLink(_MODULE_DIR_ . 'ps_imageslider/images/' . $slide[$key]);
+            }
             $slide['url'] = $this->validateUrl($slide['url']);
         }
 
@@ -696,7 +765,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         }
 
         $results = Db::getInstance((bool) _PS_USE_SQL_SLAVE_)->executeS(
-            'SELECT hssl.`image`, hssl.`id_lang`
+            'SELECT hssl.`image_desktop`, hssl.`image_mobile`, hssl.`id_lang`
             FROM ' . _DB_PREFIX_ . 'homeslider hs
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides hss ON (hs.id_homeslider_slides = hss.id_homeslider_slides)
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides_lang hssl ON (hss.id_homeslider_slides = hssl.id_homeslider_slides)
@@ -705,7 +774,10 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         );
 
         foreach ($results as $result) {
-            $images[$result['id_lang']] = $result['image'];
+            foreach($this->image_types as $image_type) {
+                $key = 'image_' . $image_type;
+                $images[$key][$result['id_lang']] = $result[$key];
+            }
         }
 
         return $images;
@@ -769,8 +841,16 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 'input' => [
                     [
                         'type' => 'file_lang',
-                        'label' => $this->trans('Image', [], 'Admin.Global'),
-                        'name' => 'image',
+                        'label' => $this->trans('Image desktop', [], 'Admin.Global'),
+                        'name' => 'image_desktop',
+                        'required' => true,
+                        'lang' => true,
+                        'desc' => $this->trans('Maximum image size: %s.', [ini_get('upload_max_filesize')], 'Admin.Global'),
+                    ],
+                    [
+                        'type' => 'file_lang',
+                        'label' => $this->trans('Image mobile', [], 'Admin.Global'),
+                        'name' => 'image_mobile',
                         'required' => true,
                         'lang' => true,
                         'desc' => $this->trans('Maximum image size: %s.', [ini_get('upload_max_filesize')], 'Admin.Global'),
@@ -828,13 +908,21 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         if (Tools::isSubmit('id_slide') && $this->slideExists((int) Tools::getValue('id_slide'))) {
             $slide = new Ps_HomeSlide((int) Tools::getValue('id_slide'));
             $fields_form['form']['input'][] = ['type' => 'hidden', 'name' => 'id_slide'];
-            $fields_form['form']['images'] = $slide->image;
+
+            foreach($this->image_types as $image_type) {
+                $image_name = 'image_' . $image_type;
+                $fields_form['form']['images'][$image_name] = $slide->{$image_name};
+            }
+
+            $fields_form['form']['type'] = $slide->type;
 
             $has_picture = true;
 
             foreach (Language::getLanguages(false) as $lang) {
-                if (!isset($slide->image[$lang['id_lang']])) {
-                    $has_picture &= false;
+                foreach($this->image_types as $image_type) {
+                    if (!isset($slide->{'image_' . $image_type}[$lang['id_lang']])) {
+                        $has_picture &= false;
+                    }
                 }
             }
 
@@ -986,7 +1074,6 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         $languages = Language::getLanguages(false);
 
         foreach ($languages as $lang) {
-            $fields['image'][$lang['id_lang']] = Tools::getValue('image_' . (int) $lang['id_lang']);
             $fields['title'][$lang['id_lang']] = Tools::getValue(
                 'title_' . (int) $lang['id_lang'],
                 isset($slide->title[$lang['id_lang']]) ? $slide->title[$lang['id_lang']] : ''
