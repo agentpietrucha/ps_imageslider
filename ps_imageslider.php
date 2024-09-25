@@ -52,7 +52,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
     {
         $this->name = 'ps_imageslider';
         $this->tab = 'front_office_features';
-        $this->version = '3.2.0';
+        $this->version = '3.2.1';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->secure_key = Tools::hash($this->name);
@@ -666,12 +666,11 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 new Sortable(slideList[0], {
                 animation: 150,
                 onUpdate: function (event) {
-                    var sortableIdsAsTableString = this.toArray();
-                    var sortableIdsAsData = sortableIdsAsTableString.map((x) => x.slice(-1));
+                    var slideIdList = this.toArray();
                     var ajaxCallParameters = {
                     ajax: true,
                     action: "updateSlidesPosition",
-                    slides: sortableIdsAsData
+                    slides: slideIdList
                     };
                     $.ajax({
                     type: "POST",
