@@ -23,7 +23,14 @@
       {foreach from=$homeslider.slides item=slide}
         <li class="slide">
           {if !empty($slide.url)}<a href="{$slide.url}">{/if}
-            <img src="{$slide.image_url}" alt="{$slide.legend|escape}" />
+            {assign var=file_type value="."|explode:$slide.image|@end}
+            {if $file_type|in_array:['mp4']}
+                <video autoplay playsinline muted loop>
+                    <source type="video/mp4" src="{$slide.image_url}" alt="{$slide.legend|escape}" />
+                </video>
+            {else}
+                <img src="{$slide.image_url}" alt="{$slide.legend|escape}" />
+            {/if}
             {if $slide.title || $slide.description }
               <span class="caption">
                 <h2>{$slide.title}</h2>

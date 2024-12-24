@@ -481,27 +481,39 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             $languages = Language::getLanguages(false);
 
             foreach ($languages as $language) {
+
+                if (!isset($_FILES['image_' . $language['id_lang']]) &&
+                    empty($_FILES['image_' . $language['id_lang']]['tmp_name'])) {
+                    $errors[] = "File not uploaded for " .  $language["name"] . " language!";
+                    continue;
+                }
+
                 $slide->title[$language['id_lang']] = Tools::getValue('title_' . $language['id_lang']);
                 $slide->url[$language['id_lang']] = Tools::getValue('url_' . $language['id_lang']);
                 $slide->legend[$language['id_lang']] = Tools::getValue('legend_' . $language['id_lang']);
                 $slide->description[$language['id_lang']] = Tools::getValue('description_' . $language['id_lang']);
 
-                /* Uploads image and sets slide */
-                $type = '';
-                $imagesize = 0;
+                $file_type = Tools::strtolower(explode('/', $_FILES['image_' . $language['id_lang']]['type'])[0]);
+                $file_extension = Tools::strtolower(Tools::substr(strrchr($_FILES['image_' . $language['id_lang']]['name'], '.'), 1));
 
-                if (
-                    isset($_FILES['image_' . $language['id_lang']]) &&
-                    !empty($_FILES['image_' . $language['id_lang']]['tmp_name'])
-                ) {
-                    $type = Tools::strtolower(Tools::substr(strrchr($_FILES['image_' . $language['id_lang']]['name'], '.'), 1));
+                if ($file_type == 'video') {
+                    // process videos
+                    if (!in_array($file_extension, ['mp4'])) {
+                        $errors[] = "Unsupported file extension: $file_extension";
+                        continue;
+                    }
+                    $salt = sha1(microtime());
+                    $result_filename = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
+                    if (!move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], __DIR__ . '/images/' . $result_filename)) {
+                        $errors[] = "Failed to process the file";
+//                        continue;
+                    }
+                    $slide->image[$language['id_lang']] = $result_filename;
+                } elseif ($file_type == 'image') {
+                    // process images
                     $imagesize = @getimagesize($_FILES['image_' . $language['id_lang']]['tmp_name']);
-                }
-
-                if (
-                    !empty($type) &&
-                    !empty($imagesize) &&
-                    in_array(
+                    // check file extension/type
+                    if (in_array(
                         Tools::strtolower(Tools::substr(strrchr($imagesize['mime'], '/'), 1)),
                         [
                             'jpg',
@@ -510,24 +522,24 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                             'png',
                         ]
                     ) &&
-                    in_array($type, ['jpg', 'gif', 'jpeg', 'png'])
-                ) {
-                    $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
-                    $salt = sha1(microtime());
-                    $file_name = Tools::str2url($_FILES['image_' . $language['id_lang']]['name']) . $type;
-                    if ($error = ImageManager::validateUpload($_FILES['image_' . $language['id_lang']])) {
-                        $errors[] = $error;
-                    } elseif (!$temp_name || !move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $temp_name)) {
-                        return false;
-                    } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $file_name, null, null, $type)) {
-                        $errors[] = $this->displayError($this->trans('An error occurred during the image upload process.', [], 'Admin.Notifications.Error'));
+                    in_array($file_extension, ['jpg', 'gif', 'jpeg', 'png'])) {
+                        $temp_name = tempnam(_PS_TMP_IMG_DIR_, 'PS');
+                        $salt = sha1(microtime());
+                        if ($error = ImageManager::validateUpload($_FILES['image_' . $language['id_lang']])) {
+                            $errors[] = $error;
+                        } elseif (!$temp_name || !move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $temp_name)) {
+                            $errors[] = "Failed to process the file";
+                        } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'], null, null, $file_extension)) {
+                            $errors[] = $this->displayError($this->trans('An error occurred during the image upload process.', [], 'Admin.Notifications.Error'));
+                        }
+                        if (file_exists($temp_name)) {
+                            @unlink($temp_name);
+                        }
+                        $slide->image[$language['id_lang']] = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
+                    } else {
+                        $errors[] = "Unsupported file extension: " . $file_extension;
+                        continue;
                     }
-                    if (file_exists($temp_name)) {
-                        @unlink($temp_name);
-                    }
-                    $slide->image[$language['id_lang']] = $salt . '_' . $file_name;
-                } elseif (Tools::getValue('image_old_' . $language['id_lang']) != '') {
-                    $slide->image[$language['id_lang']] = Tools::getValue('image_old_' . $language['id_lang']);
                 }
             }
 
