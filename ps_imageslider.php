@@ -769,6 +769,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
 
         foreach ($slides as &$slide) {
             $slide['image_url'] = $this->context->link->getMediaLink(_MODULE_DIR_ . 'ps_imageslider/images/' . $slide['image']);
+            $slide['poster_url'] = $this->context->link->getMediaLink(_MODULE_DIR_ . 'ps_imageslider/images/' . $slide['poster']);
             $slide['url'] = $this->validateUrl($slide['url']);
         }
 
