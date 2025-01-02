@@ -500,14 +500,14 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 if ($file_type == 'video') {
                     // process videos
                     if (!in_array($file_extension, ['mp4'])) {
-                        $errors[] = "Unsupported file extension: $file_extension";
+                        $errors[] = $this->trans('Unsupported file extension: %extension%', ['%extension%' => $file_extension], 'Modules.Imageslider.Admin');
                         continue;
                     }
                     $salt = sha1(microtime());
                     $result_filename = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
                     $result_path = __DIR__ . '/images/' . $result_filename;
                     if (!move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $result_path)) {
-                        $errors[] = "Failed to process the file";
+                        $errors[] = $this->trans('Failed to process the file', [], 'Modules.Imageslider.Admin');
                         continue;
                     }
                     $slide->image[$language['id_lang']] = $result_filename;
@@ -542,7 +542,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                         if ($error = ImageManager::validateUpload($_FILES['image_' . $language['id_lang']])) {
                             $errors[] = $error;
                         } elseif (!$temp_name || !move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $temp_name)) {
-                            $errors[] = "Failed to process the file";
+                            $errors[] = $this->trans('Failed to process the file', [], 'Modules.Imageslider.Admin');
                         } elseif (!ImageManager::resize($temp_name, __DIR__ . '/images/' . $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'], null, null, $file_extension)) {
                             $errors[] = $this->displayError($this->trans('An error occurred during the image upload process.', [], 'Admin.Notifications.Error'));
                         }
@@ -551,11 +551,11 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                         }
                         $slide->image[$language['id_lang']] = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
                     } else {
-                        $errors[] = "Unsupported file extension: " . $file_extension;
+                        $errors[] = $this->trans('Unsupported file extension: %extension%', ['%extension%' => $file_extension], 'Modules.Imageslider.Admin');
                         continue;
                     }
                 } else {
-                    $errors[] = "Unsupported file type: $file_type";
+                    $errors[] = $this->trans('Unsupported file type: %file_type%', ['%file_type%' => $file_type], 'Modules.Imageslider.Admin');
                 }
             }
 
