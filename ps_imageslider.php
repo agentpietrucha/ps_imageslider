@@ -917,6 +917,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
             $slide = new Ps_HomeSlide((int) Tools::getValue('id_slide'));
             $fields_form['form']['input'][] = ['type' => 'hidden', 'name' => 'id_slide'];
             $fields_form['form']['images'] = $slide->image;
+            $fields_form['form']['poster'] = $slide->poster;
 
             $has_picture = true;
 
