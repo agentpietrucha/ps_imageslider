@@ -566,8 +566,26 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                     if (!$slide->add()) {
                         $errors[] = $this->displayError($this->trans('The slide could not be added.', [], 'Modules.Imageslider.Admin'));
                     }
-                } elseif (!$slide->update()) {
-                    $errors[] = $this->displayError($this->trans('The slide could not be updated.', [], 'Modules.Imageslider.Admin'));
+                } else {
+                    $oldSlide = new Ps_HomeSlide((int) Tools::getValue('id_slide'));
+                    if ($slide->update()) {
+                        // remove old files
+                        $images = $oldSlide->image;
+                        foreach ($images as $image) {
+                            if (file_exists(__DIR__ . '/images/' . $image)) {
+                                @unlink(__DIR__ . '/images/' . $image);
+                            }
+                        }
+
+                        $posters = $oldSlide->poster;
+                        foreach ($posters as $poster) {
+                            if (file_exists(__DIR__ . '/images/' . $poster)) {
+                                @unlink(__DIR__ . '/images/' . $poster);
+                            }
+                        }
+                    } else {
+                        $errors[] = $this->displayError($this->trans('The slide could not be updated.', [], 'Modules.Imageslider.Admin'));
+                    }
                 }
                 $this->clearCache();
             }
