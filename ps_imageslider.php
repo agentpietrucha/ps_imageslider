@@ -554,6 +554,8 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                         $errors[] = "Unsupported file extension: " . $file_extension;
                         continue;
                     }
+                } else {
+                    $errors[] = "Unsupported file type: $file_type";
                 }
             }
 
