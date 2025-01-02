@@ -224,19 +224,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
               PRIMARY KEY (`id_homeslider_slides`)
             ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=UTF8;
         ');
-        var_dump('
-            CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'homeslider_slides_lang` (
-              `id_homeslider_slides` int(10) unsigned NOT NULL,
-              `id_lang` int(10) unsigned NOT NULL,
-              `title` varchar(255) NOT NULL,
-              `description` text NOT NULL,
-              `legend` varchar(255) NOT NULL,
-              `url` varchar(255) NOT NULL,
-              `image` varchar(255) NOT NULL,
-              `poster` varchar(255) NOT NULL,
-              PRIMARY KEY (`id_homeslider_slides`,`id_lang`)
-            ) ENGINE=' . _MYSQL_ENGINE_ . ' DEFAULT CHARSET=UTF8;
-        ');
+
         /* Slides lang configuration */
         $res &= Db::getInstance()->execute('
             CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . 'homeslider_slides_lang` (
@@ -498,7 +486,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
 
                 if (!isset($_FILES['image_' . $language['id_lang']]) &&
                     empty($_FILES['image_' . $language['id_lang']]['tmp_name'])) {
-                    $errors[] = "File not uploaded for " .  $language["name"] . " language!";
+                    $errors[] = $this->trans('File not uploaded for %language% language!', ['%language%' => $language['name']], 'Modules.Imageslider.Admin');
                     continue;
                 }
 
