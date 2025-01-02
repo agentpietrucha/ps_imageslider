@@ -1,12 +1,12 @@
 {
     "name": "prestashop/ps_imageslider",
-    "description": "PrestaShop - Image slider",
-    "homepage": "https://github.com/PrestaShop/ps_imageslider",
+    "description": "PrestaShop - Image & Videos slider",
+    "homepage": "https://github.com/agentpietrucha/ps_imageslider/",
     "license": "AFL-3.0",
     "authors": [
         {
-            "name": "PrestaShop SA",
-            "email": "contact@prestashop.com"
+            "name": "Karol Sawicki",
+            "email": "savickik@gmail.com"
         }
     ],
     "require": {
@@ -25,5 +25,5 @@
             "ps_imageslider.php"
         ]
     },
-    "author": "PrestaShop"
+    "author": "Karol Sawicki"
 }
