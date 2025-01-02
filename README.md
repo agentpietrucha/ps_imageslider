@@ -1,5 +1,17 @@
 # Image slider
 
+## How to install?
+Download the zipped source code from `Release` tab and upload it in the modules section in prestashop. 
+In order for the module to create video posters (better performance. The browser will load the poster image first before downloading the video. [Explanation](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video#poster)) `ffmpeg` needs to be installed on the machine. Otherwise the module won't create posters. But that won't affect the functionality of the module. Videos will still be handled
+
+**How to install `FFMPEG`?**
+```
+sudo apt update && sudo apt upgrade
+```
+and then
+```
+sudo apt install ffmpeg
+```
 ## About
 
 Add sliding images to your homepage to welcome your visitors in a visual and friendly way.
