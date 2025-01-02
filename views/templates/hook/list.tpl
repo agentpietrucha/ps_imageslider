@@ -36,7 +36,7 @@
 						<div class="col-md-3">
 							{assign var=file_type value="."|explode:$slide.image|@end}
 							{if $file_type|in_array:['mp4']}
-								<video class="img-thumbnail" controls autoplay playsinline muted>
+								<video class="img-thumbnail" {if $slide.poster}poster="{$image_baseurl}{$slide.poster}"{/if} controls autoplay playsinline muted>
 									<source type="video/mp4" src="{$image_baseurl}{$slide.image}" alt="{$slide.title}"/>
 								</video>
 							{else}
