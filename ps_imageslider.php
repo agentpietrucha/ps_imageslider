@@ -35,6 +35,7 @@ if (file_exists($autoloadPath)) {
 }
 
 include_once __DIR__ . '/Ps_HomeSlide.php';
+include_once __DIR__ . '/video_manager.php';
 
 class Ps_ImageSlider extends Module implements WidgetInterface
 {
@@ -504,11 +505,24 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                     }
                     $salt = sha1(microtime());
                     $result_filename = $salt . '_' . $_FILES['image_' . $language['id_lang']]['name'];
-                    if (!move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], __DIR__ . '/images/' . $result_filename)) {
+                    $result_path = __DIR__ . '/images/' . $result_filename;
+                    if (!move_uploaded_file($_FILES['image_' . $language['id_lang']]['tmp_name'], $result_path)) {
                         $errors[] = "Failed to process the file";
-//                        continue;
+                        continue;
                     }
                     $slide->image[$language['id_lang']] = $result_filename;
+
+                    try {
+                        VideoManager::createPoster(
+                            $result_path,
+                            __DIR__ . '/images/' . $this->replaceExtension($result_filename, "webp")
+                        );
+                        $slide->poster[$language['id_lang']] = $this->replaceExtension($result_filename, "webp");
+                    } catch (Exception $e) {
+                        // TODO: Add error logs
+                        var_dump("Failed to create a poster");
+                    }
+
                 } elseif ($file_type == 'image') {
                     // process images
                     $imagesize = @getimagesize($_FILES['image_' . $language['id_lang']]['tmp_name']);
@@ -574,6 +588,13 @@ class Ps_ImageSlider extends Module implements WidgetInterface
         } elseif (Tools::isSubmit('submitSlide')) {
             Tools::redirectAdmin($this->context->link->getAdminLink('AdminModules', true) . '&conf=3&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name);
         }
+    }
+
+    private function replaceExtension($filename, $extension)
+    {
+        $elements = explode(".", $filename);
+        array_pop($elements);
+        return implode("", array_merge($elements, [".$extension"]));
     }
 
     public function hookdisplayHeader($params)
@@ -735,7 +756,7 @@ class Ps_ImageSlider extends Module implements WidgetInterface
 
         $slides = Db::getInstance((bool) _PS_USE_SQL_SLAVE_)->executeS(
             'SELECT hs.`id_homeslider_slides` as id_slide, hss.`position`, hss.`active`, hssl.`title`,
-            hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image`
+            hssl.`poster`, hssl.`url`, hssl.`legend`, hssl.`description`, hssl.`image`
             FROM ' . _DB_PREFIX_ . 'homeslider hs
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides hss ON (hs.id_homeslider_slides = hss.id_homeslider_slides)
             LEFT JOIN ' . _DB_PREFIX_ . 'homeslider_slides_lang hssl ON (hss.id_homeslider_slides = hssl.id_homeslider_slides)
@@ -822,7 +843,6 @@ class Ps_ImageSlider extends Module implements WidgetInterface
                 'image_baseurl' => $this->_path . 'images/',
             ]
         );
-
         return $this->display(__FILE__, 'list.tpl');
     }
 
