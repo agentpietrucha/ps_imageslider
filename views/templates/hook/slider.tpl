@@ -25,7 +25,7 @@
           {if !empty($slide.url)}<a href="{$slide.url}">{/if}
             {assign var=file_type value="."|explode:$slide.image|@end}
             {if $file_type|in_array:['mp4']}
-                <video autoplay playsinline muted loop>
+                <video {if $slide.poster_url}poster="{$slide.poster_url}"{/if} autoplay playsinline muted loop>
                     <source type="video/mp4" src="{$slide.image_url}" alt="{$slide.legend|escape}" />
                 </video>
             {else}
