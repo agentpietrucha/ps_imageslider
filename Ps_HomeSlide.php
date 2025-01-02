@@ -77,6 +77,13 @@ class Ps_HomeSlide extends ObjectModel
             }
         }
 
+        $posters = $this->poster;
+        foreach ($posters as $poster) {
+            if ($poster && file_exists(__DIR__ . '/images/' . $poster)) {
+                $res &= @unlink(__DIR__ . '/images/' . $poster);
+            }
+        }
+
         $res &= $this->reOrderPositions();
 
         $res &= Db::getInstance()->execute('
