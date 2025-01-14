@@ -27,15 +27,16 @@
 						<div class="translatable-field lang-{$language.id_lang}" {if $language.id_lang != $defaultFormLanguage}style="display:none"{/if}>
 					{/if}
 						<div class="col-lg-{if $languages|count > 1}10{else}12{/if}">
-							{if isset($fields[0]['form']['images'])}
-								{assign var=file_type value="."|explode:$fields[0]['form']['images'][$language.id_lang]|@end}
+							{if isset($fields[0]['form'][$input.name]) and !empty($fields[0]['form'][$input.name][$language.id_lang])}
+								{assign var=image value=$fields[0]['form'][$input.name][$language.id_lang]}
+								{assign var=file_type value="."|explode:$image|@end}
 								{if $file_type|in_array:['mp4']}
-									{assign var=poster value=$fields[0]['form']['poster'][$language.id_lang]}
+									{assign var=poster value=$fields[0]['form'][$input.name][$language.id_lang]}
 									<video class="img-thumbnail" {if $poster}poster="{$image_baseurl}{$poster}"{/if} controls autoplay playsinline muted>
-										<source type="video/mp4" src="{$image_baseurl}{$fields[0]['form']['images'][$language.id_lang]}" alt="{$slide.title}"/>
+										<source type="video/mp4" src="{$image_baseurl}{$image}" />
 									</video>
 								{else}
-									<img src="{$image_baseurl}{$fields[0]['form']['images'][$language.id_lang]}" class="img-thumbnail" />
+									<img src="{$image_baseurl}{$image}" class="img-thumbnail" />
 								{/if}
 							{/if}
 							<div class="dummyfile input-group">

@@ -23,11 +23,14 @@ class Ps_HomeSlide extends ObjectModel
     public $description;
     public $url;
     public $legend;
-    public $image;
-    public $poster;
+    public $image_desktop;
+    public $image_mobile;
+    public $poster_desktop;
+    public $poster_mobile;
     public $active;
     public $position;
     public $id_shop;
+    public static $image_types = ['desktop', 'mobile'];
 
     /**
      * @see ObjectModel::$definition
@@ -45,8 +48,10 @@ class Ps_HomeSlide extends ObjectModel
             'title' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
             'legend' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
             'url' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isUrl', 'size' => 255],
-            'image' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
-            'poster' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'image_desktop' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'image_mobile' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'poster_desktop' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
+            'poster_mobile' => ['type' => self::TYPE_STRING, 'lang' => true, 'validate' => 'isCleanHtml', 'size' => 255],
         ],
     ];
 
@@ -68,7 +73,7 @@ class Ps_HomeSlide extends ObjectModel
     {
         $res = true;
 
-        $images = $this->image;
+        $images = array_merge($this->image_desktop, $this->image_mobile);
         foreach ($images as $image) {
             if (preg_match('/sample/', $image) === 0) {
                 if ($image && file_exists(__DIR__ . '/images/' . $image)) {
@@ -77,7 +82,7 @@ class Ps_HomeSlide extends ObjectModel
             }
         }
 
-        $posters = $this->poster;
+        $posters = array_merge($this->poster_desktop, $this->poster_mobile);
         foreach ($posters as $poster) {
             if ($poster && file_exists(__DIR__ . '/images/' . $poster)) {
                 $res &= @unlink(__DIR__ . '/images/' . $poster);
