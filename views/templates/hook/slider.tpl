@@ -18,19 +18,70 @@
  *}
 
 {if $homeslider.slides}
+  <script>
+      function createVideo(file, poster) {
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.playsInline = true;
+          video.muted = true;
+          video.loop = true;
+
+          const source = document.createElement('source');
+          source.type = 'video/mp4';
+          source.src = file
+
+          video.appendChild(source);
+
+          if (poster) {
+              video.poster = poster
+          }
+
+          return video;
+      }
+
+      function createImage(file) {
+          const img = document.createElement('img');
+          img.src = file
+          return img;
+      }
+
+      function addFile(file, poster, container_id) {
+          const file_type = file.split('.').at(-1)
+
+          if (['mp4'].includes(file_type)) { // video
+              const video = createVideo(file, poster);
+              document.querySelector(container_id).appendChild(video);
+          } else { // image
+              const img = createImage(file);
+              document.querySelector(container_id).appendChild(img);
+          }
+      }
+  </script>
   <div class="homeslider-container" data-interval="{$homeslider.speed}" data-wrap="{$homeslider.wrap}" data-pause="{$homeslider.pause}">
     <ul class="rslides">
-      {foreach from=$homeslider.slides item=slide}
+      {foreach from=$homeslider.slides item=slide name=homeslider}
+        {assign var=index value=$smarty.foreach.homeslider.index}
         <li class="slide">
           {if !empty($slide.url)}<a href="{$slide.url}">{/if}
-            {assign var=file_type value="."|explode:$slide.image|@end}
-            {if $file_type|in_array:['mp4']}
-                <video {if $slide.poster_url}poster="{$slide.poster_url}"{/if} autoplay playsinline muted loop>
-                    <source type="video/mp4" src="{$slide.image_url}" alt="{$slide.legend|escape}" />
-                </video>
-            {else}
-                <img src="{$slide.image_url}" alt="{$slide.legend|escape}" />
-            {/if}
+
+            <div id="homeslider_container_{$index}"></div>
+
+            <script>
+                (function() {
+                  const container_id = "#homeslider_container_{$index}";
+                  let file;
+                  let poster;
+                    if (window.innerWidth <= 768) {
+                        file = "{if $slide.image_mobile}{$slide.image_mobile_url}{else}{$slide.image_desktop_url}{/if}";
+                        poster = "{if $slide.poster_mobile_url}{$slide.poster_mobile_url}{else}{$slide.poster_desktop_url}{/if}";
+                    } else {
+                        file = "{$slide.image_desktop_url}";
+                        poster = "{if $slide.poster_desktop_url}{$slide.poster_desktop_url}{/if}";
+                    }
+                    addFile(file, poster, container_id)
+                })()
+            </script>
+
             {if $slide.title || $slide.description }
               <span class="caption">
                 <h2>{$slide.title}</h2>
