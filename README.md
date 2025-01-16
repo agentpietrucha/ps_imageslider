@@ -1,5 +1,15 @@
 # Image slider
 
+## What's the difference 🤔
+This fork adds 2 new functionalities to the OG module:
+- Uploading videos files in `.mp4` format. It also generates posters from the first frame automatically\*,
+- Uploading separate file (image or video) to be displayed on mobile devices\**.
+
+\* - `FFMPEG` needs to be installed on the machine for the poster generator to work
+\** - If no mobile file is provided, the desktop file will be used instead
+
+To better controll the display and behaviour of module display modify the corresponding `.tpl` file in your theme. The path is `themes/**THEME_NAME**/modules/ps_imageslider/views/templates/hook/slider.tpl`
+
 ## How to install?
 Download the zipped source code from `Release` tab and upload it in the modules section in prestashop. 
 In order for the module to create video posters (better performance. The browser will load the poster image first before downloading the video. [Explanation](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video#poster)) `ffmpeg` needs to be installed on the machine. Otherwise the module won't create posters. But that won't affect the functionality of the module. Videos will still be handled
